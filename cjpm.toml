@@ -1,0 +1,14 @@
+[dependencies]
+
+[package]
+  cjc-version = "0.56.4"
+  compile-option = ""
+  description = "clang-c binding for cangjie"
+  link-option = ""
+  name = "clang_cj"
+  output-type = "static"
+  override-compile-option = ""
+  src-dir = ""
+  target-dir = ""
+  version = "1.0.0"
+  package-configuration = {}
