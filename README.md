@@ -1,3 +1,3 @@
 # clang-cj
 
-clang-c 的仓颉 binding
+clang_c 的仓颉 binding

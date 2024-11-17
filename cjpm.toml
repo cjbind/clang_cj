@@ -1,5 +1,3 @@
-[dependencies]
-
 [package]
   cjc-version = "0.56.4"
   compile-option = ""
@@ -12,3 +10,8 @@
   target-dir = ""
   version = "1.0.0"
   package-configuration = {}
+
+[dependencies]
+
+[script-dependencies]
+glob = { git = "https://github.com/Zxilly/glob-cj.git", branch = "master" }

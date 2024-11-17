@@ -2,3 +2,4 @@
 .vscode/
 .idea/
 target/
+build-script-cache/
