@@ -50,14 +50,15 @@ func stagePreBuild(): Int64 {
     }
 
     let search = { d: String => 
-        let options = glob.MatchOptions()
+        var options = MatchOptions()
         options.requireLiteralSeparator = true
         for (f in files) {
-            const p = glob.globWith("${d}/${f}", options)
+            let p = globWith("${d}/${f}", options)
             if (let Some(bin) <- p.next()) {
                 return bin;
             }
         }
+        throw Exception("Cannot find required files")
     }
 
     
