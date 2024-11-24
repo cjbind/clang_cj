@@ -1,6 +1,8 @@
 package build
 
 import std.process.Process
+import std.fs.Path
+import std.io.{readString, ByteBuffer}
 import std.collection.ArrayList
 import glob.{globWith, MatchOptions}
 
@@ -13,54 +15,139 @@ main(): Int64 {
 
 @When[os == "Linux" || os == "macOS"]
 const DLL_PREFIX = "lib"
-
 @When[os == "Windows"]
 const DLL_PREFIX = ""
-
 @When[os == "Linux"]
 const DLL_SUFFIX = ".so"
-
 @When[os == "macOS"]
 const DLL_SUFFIX = ".dylib"
-
 @When[os == "Windows"]
 const DLL_SUFFIX = ".dll"
-
-
 @When[os == "Linux"]
 const OS = "Linux"
-
 @When[os == "macOS"]
 const OS = "macOS"
-
 @When[os == "Windows"]
 const OS = "Windows"
+let DIRS_LINUX = [
+    "/usr/local/llvm*/lib*",
+    "/usr/local/lib*/*/*",
+    "/usr/local/lib*/*",
+    "/usr/local/lib*",
+    "/usr/lib*/*/*",
+    "/usr/lib*/*",
+    "/usr/lib*"
+]
+let DIRS_MACOS = [
+    "/usr/local/opt/llvm*/lib/llvm*/lib",
+    "/Library/Developer/CommandLineTools/usr/lib",
+    "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib",
+    "/usr/local/opt/llvm*/lib"
+]
+let DIRS_WINDOWS = ["C:\\MSYS*\\MinGW*\\lib", "C:\\MSYS*\\clang*\\lib"]
 
-func stagePreBuild(): Int64 {
+func runLLVMConfig() {
+    try {
+        let (_, out, _) = Process.runOutput("llvm-config", ["--prefix"])
+        let buf = ByteBuffer(out)
+        let s = readString(buf).trimAscii()
+        return s
+    } catch (e: Exception) {
+        return None<String>
+    }
+}
+
+func xcodeSelect() {
+    try {
+        let (_, out, _) = Process.runOutput("xcode-select", ["--print-path"])
+        let buf = ByteBuffer(out)
+        let s = readString(buf).trimAscii()
+        return s
+    } catch (e: Exception) {
+        return None<String>
+    }
+}
+
+// cjlint-ignore -start !G.FUN.01 fun
+func searchClang(): Option<String> {
+    let dirs = ArrayList<String>(
+        match (OS) {
+            case "Linux" => DIRS_LINUX
+            case "macOS" => DIRS_MACOS
+            case "Windows" => DIRS_WINDOWS
+            case _ => throw Exception("Unsupported OS")
+        })
+
     let files = ArrayList<String>("${DLL_PREFIX}clang${DLL_SUFFIX}")
-    
-    match(OS) {
-        case "Linux" => 
+
+    match (OS) {
+        case "Linux" =>
             files.append("libclang-*.so")
             files.append("libclang.so.*")
             files.append("libclang-*.so.*")
-        case "Windows" => 
-            files.append("libclang.dll")
+        case "Windows" => files.append("libclang.dll")
         case _ => ()
     }
 
-    let search = { d: String => 
+    let search: (String) -> Option<Path> = {
+        d: String =>
         var options = MatchOptions()
         options.requireLiteralSeparator = true
         for (f in files) {
             let p = globWith("${d}/${f}", options)
-            if (let Some(bin) <- p.next()) {
-                return bin;
+            for (bin in p) {
+                if (bin.fileName.contains("-cpp.")) {
+                    continue
+                }
+                return Some(bin)
             }
         }
-        throw Exception("Cannot find required files")
+        return None<Path>
     }
 
-    
+    let search_dir: (String) -> Option<Path> = {
+        d: String =>
+        if (let Some(b) <- search(d)) {
+            return Some(b)
+        }
+
+        if (OS == "Windows") {
+            if (d.endsWith("lib")) {
+                let p = Path(d)
+                let n = p.join("bin").toString()
+                return search(n)
+            }
+        }
+
+        return None<Path>
+    }
+
+    if (OS == "macOS") {
+        if (let Some(base) <- xcodeSelect()) {
+            let pb = Path(base)
+            dirs.prepend(pb.join("Toolchains/XcodeDefault.xctoolchain/usr/lib").toString())
+        }
+    }
+
+    if (let Some(base) <- runLLVMConfig()) {
+        let pb = Path(base)
+        dirs.prepend(pb.join("bin").toString())
+        dirs.prepend(pb.join("lib").toString())
+        dirs.prepend(pb.join("lib64").toString())
+    }
+
+    for (d in dirs) {
+        if (let Some(b) <- search_dir(d)) {
+            return Some(b.toString())
+        }
+    }
+
+    return None
+}
+// cjlint-ignore -end fun
+
+func stagePreBuild(): Int64 {
+    println(searchClang().getOrThrow())
+
     return 0
 }

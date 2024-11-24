@@ -3,15 +3,13 @@
   compile-option = ""
   description = "clang-c binding for cangjie"
   link-option = ""
-  name = "clang_cj"
+  name = "clang_c"
   output-type = "static"
   override-compile-option = ""
   src-dir = ""
   target-dir = ""
   version = "1.0.0"
   package-configuration = {}
-
-[dependencies]
 
 [script-dependencies]
 glob = { git = "https://github.com/Zxilly/glob-cj.git", branch = "master" }
