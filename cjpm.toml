@@ -1,18 +1,16 @@
 [package]
 cjc-version = "0.56.4"
-compile-option = ""
+compile-option = "-L ./lib -lclang"
 description = "clang-c binding for cangjie"
 link-option = ""
-name = "clang_c"
-output-type = "static"
+name = "clang_cj"
+output-type = "dynamic"
 override-compile-option = ""
 src-dir = ""
 target-dir = ""
 version = "1.0.0"
 package-configuration = {}
 
-[ffi.c]
-clang = { path = "./lib" }
 
 [script-dependencies]
 glob = { git = "https://github.com/Zxilly/glob-cj.git", branch = "master" }
