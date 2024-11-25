@@ -1,7 +1,7 @@
 package build
 
 import std.process.Process
-import std.fs.Path
+import std.fs.{Path, exists, copy, removeIfExists}
 import std.io.{readString, ByteBuffer}
 import std.collection.ArrayList
 import glob.{globWith, MatchOptions}
@@ -9,6 +9,7 @@ import glob.{globWith, MatchOptions}
 main(): Int64 {
     match (Process.current.arguments[0]) {
         case "pre-build" => stagePreBuild()
+        case "pre-clean" => stagePreClean()
         case _ => 0
     }
 }
@@ -146,8 +147,26 @@ func searchClang(): Option<String> {
 }
 // cjlint-ignore -end fun
 
+var STUB_CLANG_LIB = Path("./lib/libclang${DLL_SUFFIX}")
+
+func copyIfMissing(src: String) {
+    if (!exists(STUB_CLANG_LIB)) {
+        copy(Path(src), to: STUB_CLANG_LIB)
+    }
+}
+
 func stagePreBuild(): Int64 {
-    println(searchClang().getOrThrow())
+    match (searchClang()) {
+        case Some(clang) => copyIfMissing(clang)
+
+        case None => throw Exception("Clang not found")
+    }
+
+    return 0
+}
+
+func stagePreClean(): Int64 {
+    removeIfExists(STUB_CLANG_LIB)
 
     return 0
 }
